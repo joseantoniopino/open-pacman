@@ -12,6 +12,7 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 
 const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
+const EXIT_DOTS = { hunter: 0, ambusher: 30, flanker: 60, wanderer: 90 };
 
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots sin destruir el original, y reiniciar.
@@ -28,6 +29,7 @@ function createGame() {
     score: 0,
     lives: 3,
     dotsRemaining: dots,
+    dotsEaten: 0,
     grid,
     pacman: {
       x: PACMAN_START.x,
@@ -42,6 +44,7 @@ function createGame() {
       dir: 'up',
       speed: GHOST_SPEED,
       kind: g.kind,
+      released: EXIT_DOTS[ g.kind ] === 0,
     } ) ),
   };
 }
@@ -99,6 +102,7 @@ function movePacman( game ) {
       grid[ p.y ][ p.x ] = 0;
       game.score += 10;
       game.dotsRemaining--;
+      game.dotsEaten++;
     }
     // Si no puede seguir, se detiene en la celda.
     if ( !canMove( grid, p.x, p.y, p.dir, 'pacman' ) ) return;
@@ -142,6 +146,8 @@ function decideGhost( game, g ) {
 }
 
 function moveGhost( game, g ) {
+  if ( g.released === false ) return;
+
   const grid = game.grid;
   const width = grid[ 0 ].length;
 
