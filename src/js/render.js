@@ -140,7 +140,34 @@ function drawGhostEyes( ctx, g ) {
   }
 }
 
-function drawGhost( ctx, g, color ) {
+function drawFrightenedFace( ctx, g, flashing ) {
+  const { cx, cy } = cellCenter( g.x, g.y );
+  const color = flashing ? '#ff0000' : '#fff';
+  ctx.fillStyle = color;
+  for ( const off of [ -3.5, 3.5 ] ) {
+    ctx.beginPath();
+    ctx.arc( cx + off, cy - 2, 1.5, 0, Math.PI * 2 );
+    ctx.fill();
+  }
+  // Boca quebrada para distinguir la cara asustada de los ojos normales.
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo( cx - 6, cy + 5 );
+  for ( let i = 1; i <= 6; i++ ) {
+    ctx.lineTo( cx - 6 + i * 2, cy + ( i % 2 ? 3 : 5 ) );
+  }
+  ctx.stroke();
+}
+
+function drawGhost( ctx, g, color, frightenedRemainingMs ) {
+  if ( g.mode === 'frightened' ) {
+    const flashing = frightenedRemainingMs > 0 && frightenedRemainingMs <= 2000 &&
+      Math.floor( frightenedRemainingMs / 250 ) % 2 === 0;
+    drawGhostBody( ctx, g, flashing ? '#fff' : '#2121ff' );
+    drawFrightenedFace( ctx, g, flashing );
+    return;
+  }
   if ( g.mode !== 'eyes' ) drawGhostBody( ctx, g, color );
   drawGhostEyes( ctx, g );
 }
@@ -169,7 +196,7 @@ function draw( ctx, game, frame ) {
   drawDoor( ctx, grid );
   drawDots( ctx, grid, frame );
   drawPacman( ctx, game.pacman, frame );
-  game.ghosts.forEach( ( g ) => drawGhost( ctx, g, GHOST_COLORS[ g.kind ] ) );
+  game.ghosts.forEach( ( g ) => drawGhost( ctx, g, GHOST_COLORS[ g.kind ], game.frightenedRemainingMs ) );
   drawHUD( ctx, game, W );
 }
 

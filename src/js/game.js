@@ -13,6 +13,7 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
 const EXIT_DOTS = { hunter: 0, ambusher: 30, flanker: 60, wanderer: 90 };
+const FRIGHTENED_DURATION_MS = 6000;
 
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots y power pellets sin destruir el original, y reiniciar.
@@ -87,6 +88,25 @@ function wrapTunnel( a, width ) {
   }
 }
 
+function activateFrightened( game ) {
+  game.frightenedRemainingMs = FRIGHTENED_DURATION_MS;
+  game.ghostsEatenChain = 0;
+  for ( const g of game.ghosts ) {
+    if ( g.mode !== 'eyes' ) g.mode = 'frightened';
+  }
+}
+
+function updateFrightened( game, deltaMs ) {
+  if ( game.frightenedRemainingMs <= 0 ) return;
+  game.frightenedRemainingMs = Math.max( 0, game.frightenedRemainingMs - deltaMs );
+  if ( game.frightenedRemainingMs === 0 ) {
+    for ( const g of game.ghosts ) {
+      if ( g.mode === 'frightened' ) g.mode = 'normal';
+      g.reversePending = false;
+    }
+  }
+}
+
 function movePacman( game ) {
   const p = game.pacman;
   const grid = game.grid;
@@ -108,6 +128,7 @@ function movePacman( game ) {
       game.score += tile === 4 ? 50 : 10;
       game.dotsRemaining--;
       game.dotsEaten++;
+      if ( tile === 4 ) activateFrightened( game );
     }
     // Si no puede seguir, se detiene en la celda.
     if ( !canMove( grid, p.x, p.y, p.dir, 'pacman' ) ) return;
@@ -225,7 +246,9 @@ function collides( a, b ) {
 }
 
 // deltaMs mide tiempo de juego; el movimiento sigue siendo por actualización.
-function update( game, deltaMs ) {
+function update( game, deltaMs = 0 ) {
+  // Descontar antes del consumo permite que cada PP renueve los 6 segundos completos.
+  updateFrightened( game, deltaMs );
   movePacman( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
