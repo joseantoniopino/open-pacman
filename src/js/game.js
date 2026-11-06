@@ -30,6 +30,9 @@ function createGame() {
     lives: 3,
     dotsRemaining: dots,
     dotsEaten: 0,
+    frightenedRemainingMs: 0,
+    ghostsEatenChain: 0,
+    eatPauseRemainingMs: 0,
     grid,
     pacman: {
       x: PACMAN_START.x,
@@ -221,7 +224,8 @@ function collides( a, b ) {
   return Math.abs( a.x - b.x ) < 0.5 && Math.abs( a.y - b.y ) < 0.5;
 }
 
-function update( game ) {
+// deltaMs mide tiempo de juego; el movimiento sigue siendo por actualización.
+function update( game, deltaMs ) {
   movePacman( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 

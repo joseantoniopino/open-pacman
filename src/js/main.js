@@ -8,6 +8,7 @@ const actionBtn = document.getElementById( 'action-btn' );
 
 let game = createGame();
 let frame = 0;
+let previousTimestamp = null;
 
 const KEY_DIR = {
   ArrowLeft: 'left',
@@ -34,15 +35,18 @@ function showOverlay( title, cls, btnLabel ) {
 function startGame() {
   game = createGame();
   game.state = 'playing';
+  previousTimestamp = null;
   overlay.classList.remove( 'show' );
 }
 
 if ( actionBtn ) actionBtn.addEventListener( 'click', startGame );
 
-function loop() {
+function loop( timestamp ) {
+  const deltaMs = previousTimestamp === null ? 0 : timestamp - previousTimestamp;
+  previousTimestamp = timestamp;
   frame++;
   if ( game.state === 'playing' ) {
-    update( game );
+    update( game, deltaMs );
     if ( game.state === 'won' ) showOverlay( 'GANASTE', 'win', 'Reiniciar' );
     else if ( game.state === 'lost' ) showOverlay( 'PERDISTE', 'lose', 'Reiniciar' );
   }
@@ -50,4 +54,4 @@ function loop() {
   requestAnimationFrame( loop );
 }
 
-loop();
+requestAnimationFrame( loop );
