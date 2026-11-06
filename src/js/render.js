@@ -1,5 +1,5 @@
 // render.js
-// Dibujo arcade sobre canvas. Usa game.grid (no MAZE) para reflejar dots comidos.
+// Dibujo arcade sobre canvas. Usa game.grid (no MAZE) para reflejar consumibles comidos.
 
 const TILE = 20;
 const WALL_COLOR = '#2121ff';
@@ -66,14 +66,17 @@ function drawDoor( ctx, grid ) {
   ctx.stroke();
 }
 
-function drawDots( ctx, grid ) {
+function drawDots( ctx, grid, frame ) {
   ctx.fillStyle = DOT_COLOR;
   for ( let y = 0; y < grid.length; y++ ) {
     for ( let x = 0; x < grid[ 0 ].length; x++ ) {
-      if ( grid[ y ][ x ] !== 2 ) continue;
+      const tile = grid[ y ][ x ];
+      if ( tile !== 2 && tile !== 4 ) continue;
+      // Los power pellets parpadean; los dots normales permanecen visibles.
+      if ( tile === 4 && Math.floor( frame / 15 ) % 2 !== 0 ) continue;
       const { cx, cy } = cellCenter( x, y );
       ctx.beginPath();
-      ctx.arc( cx, cy, 2.5, 0, Math.PI * 2 );
+      ctx.arc( cx, cy, tile === 4 ? 7 : 2.5, 0, Math.PI * 2 );
       ctx.fill();
     }
   }
@@ -98,7 +101,7 @@ function drawPacman( ctx, p, frame ) {
   ctx.fill();
 }
 
-function drawGhost( ctx, g, color ) {
+function drawGhostBody( ctx, g, color ) {
   const { cx, cy } = cellCenter( g.x, g.y );
   const r = TILE / 2 - 1;
   const top = cy - r;
@@ -117,7 +120,10 @@ function drawGhost( ctx, g, color ) {
   ctx.lineTo( left, bottom );
   ctx.closePath();
   ctx.fill();
+}
 
+function drawGhostEyes( ctx, g ) {
+  const { cx, cy } = cellCenter( g.x, g.y );
   // ojos mirando segun direccion
   const dir = DIRS[ g.dir ] || { x: 0, y: 0 };
   const ex = dir.x * 1.6;
@@ -132,6 +138,38 @@ function drawGhost( ctx, g, color ) {
     ctx.arc( cx + off + ex, cy - 1 + ey, 1.5, 0, Math.PI * 2 );
     ctx.fill();
   }
+}
+
+function drawFrightenedFace( ctx, g, flashing ) {
+  const { cx, cy } = cellCenter( g.x, g.y );
+  const color = flashing ? '#ff0000' : '#fff';
+  ctx.fillStyle = color;
+  for ( const off of [ -3.5, 3.5 ] ) {
+    ctx.beginPath();
+    ctx.arc( cx + off, cy - 2, 1.5, 0, Math.PI * 2 );
+    ctx.fill();
+  }
+  // Boca quebrada para distinguir la cara asustada de los ojos normales.
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo( cx - 6, cy + 5 );
+  for ( let i = 1; i <= 6; i++ ) {
+    ctx.lineTo( cx - 6 + i * 2, cy + ( i % 2 ? 3 : 5 ) );
+  }
+  ctx.stroke();
+}
+
+function drawGhost( ctx, g, color, frightenedRemainingMs ) {
+  if ( g.mode === 'frightened' ) {
+    const flashing = frightenedRemainingMs > 0 && frightenedRemainingMs <= 2000 &&
+      Math.floor( frightenedRemainingMs / 250 ) % 2 === 0;
+    drawGhostBody( ctx, g, flashing ? '#fff' : '#2121ff' );
+    drawFrightenedFace( ctx, g, flashing );
+    return;
+  }
+  if ( g.mode !== 'eyes' ) drawGhostBody( ctx, g, color );
+  drawGhostEyes( ctx, g );
 }
 
 function drawHUD( ctx, game, W ) {
@@ -156,9 +194,9 @@ function draw( ctx, game, frame ) {
 
   drawWalls( ctx, grid );
   drawDoor( ctx, grid );
-  drawDots( ctx, grid );
+  drawDots( ctx, grid, frame );
   drawPacman( ctx, game.pacman, frame );
-  game.ghosts.forEach( ( g ) => drawGhost( ctx, g, GHOST_COLORS[ g.kind ] ) );
+  game.ghosts.forEach( ( g ) => drawGhost( ctx, g, GHOST_COLORS[ g.kind ], game.frightenedRemainingMs ) );
   drawHUD( ctx, game, W );
 }
 
