@@ -13,6 +13,7 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
 const FRIGHTENED_SPEED = 1 / 16;
+const EYES_SPEED = 1 / 5;
 const EXIT_DOTS = { hunter: 0, ambusher: 30, flanker: 60, wanderer: 90 };
 const FRIGHTENED_DURATION_MS = 6000;
 const EAT_PAUSE_DURATION_MS = 500;
@@ -247,6 +248,19 @@ function findGhostPath( grid, start, target = { x: 13, y: 14 } ) {
   return []; // No existe conexión con el destino.
 }
 
+function decideEyes( game, g ) {
+  const path = findGhostPath( game.grid, g );
+  if ( path.length < 2 ) return false;
+  const next = path[ 1 ];
+  const width = game.grid[ 0 ].length;
+  // Comparar vecinos con wrap conserva la dirección correcta en el túnel.
+  g.dir = Object.keys( DIRS ).find( ( dir ) => {
+    const d = DIRS[ dir ];
+    return ( g.x + d.x + width ) % width === next.x && g.y + d.y === next.y;
+  } );
+  return true;
+}
+
 function moveGhost( game, g ) {
   if ( !g.released && game.dotsEaten >= EXIT_DOTS[ g.kind ] ) {
     g.released = true;
@@ -257,12 +271,22 @@ function moveGhost( game, g ) {
   const width = grid[ 0 ].length;
 
   if ( aligned( g.x ) && aligned( g.y ) ) {
-    g.x = Math.round( g.x );
+    // Normalizar también el redondeo junto al borde del túnel.
+    g.x = ( Math.round( g.x ) + width ) % width;
     g.y = Math.round( g.y );
+    if ( g.mode === 'eyes' && g.x === 13 && g.y === 14 ) {
+      g.mode = 'normal';
+      g.reversePending = false;
+      g.released = true;
+    }
     // Mantener la velocidad del segmento hasta alcanzar una celda alineada.
-    g.speed = g.mode === 'frightened' ? FRIGHTENED_SPEED : GHOST_SPEED;
-    // Salir de la pen por la columna 13, incluida la puerta en la fila 12.
-    if ( isInPenPassage( g ) ) {
+    g.speed = g.mode === 'eyes' ? EYES_SPEED :
+      ( g.mode === 'frightened' ? FRIGHTENED_SPEED : GHOST_SPEED );
+    if ( g.mode === 'eyes' ) {
+      // El regreso tiene prioridad sobre la salida y permite giros de 180 grados.
+      if ( !decideEyes( game, g ) ) return;
+    } else if ( isInPenPassage( g ) ) {
+      // Salir de la pen por la columna 13, incluida la puerta en la fila 12.
       g.reversePending = false;
       if ( g.x < 13 ) g.dir = 'right';
       else if ( g.x > 13 ) g.dir = 'left';
