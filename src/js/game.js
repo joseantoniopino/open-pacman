@@ -307,15 +307,23 @@ function moveGhost( game, g ) {
 }
 
 function resetPositions( game ) {
+  // La vida nueva conserva el laberinto, la puntuación y los desbloqueos.
+  game.frightenedRemainingMs = 0;
+  game.ghostsEatenChain = 0;
+  game.eatPauseRemainingMs = 0;
   const p = game.pacman;
   p.x = PACMAN_START.x;
   p.y = PACMAN_START.y;
   p.dir = 'left';
   p.nextDir = null;
+  p.speed = PACMAN_SPEED;
   game.ghosts.forEach( ( g, i ) => {
     g.x = GHOST_STARTS[ i ].x;
     g.y = GHOST_STARTS[ i ].y;
     g.dir = 'up';
+    g.mode = 'normal';
+    g.reversePending = false;
+    g.speed = GHOST_SPEED;
   } );
 }
 
@@ -350,11 +358,11 @@ function update( game, deltaMs = 0 ) {
         return;
       }
       game.lives--;
+      resetPositions( game );
       if ( game.lives <= 0 ) {
         game.state = 'lost';
         return;
       }
-      resetPositions( game );
       break;
     }
   }
