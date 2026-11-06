@@ -1,6 +1,6 @@
 # SPEC 01 — Personalidades distintas para los 4 fantasmas
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** ninguno
 > **Fecha:** 2026-11-06
 > **Objetivo:** Sustituir los 2 fantasmas actuales por 4 fantasmas con personalidades clásicas distintas (uno persigue agresivamente a Pacman), liberación escalonada por dots y color propio por fantasma.
