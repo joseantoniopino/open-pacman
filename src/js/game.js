@@ -210,6 +210,42 @@ function decideGhost( game, g ) {
   g.dir = best;
 }
 
+// Búsqueda en anchura: ruta mínima por celdas, con origen y destino incluidos.
+// No depende de la dirección previa: los ojos pueden invertir la marcha.
+function findGhostPath( grid, start, target = { x: 13, y: 14 } ) {
+  if ( isWall( grid, start.x, start.y, 'ghost' ) ||
+    isWall( grid, target.x, target.y, 'ghost' ) ) return [];
+
+  const width = grid[ 0 ].length;
+  const first = { x: start.x, y: start.y, parent: null };
+  const queue = [ first ];
+  const visited = new Set( [ first.y * width + first.x ] );
+
+  for ( let head = 0; head < queue.length; head++ ) {
+    const current = queue[ head ];
+    if ( current.x === target.x && current.y === target.y ) {
+      const path = [];
+      for ( let cell = current; cell !== null; cell = cell.parent ) {
+        path.push( { x: cell.x, y: cell.y } );
+      }
+      return path.reverse();
+    }
+
+    for ( const dir of Object.keys( DIRS ) ) {
+      if ( !canMove( grid, current.x, current.y, dir, 'ghost' ) ) continue;
+      const d = DIRS[ dir ];
+      // canMove solo permite cruzar los bordes en la fila del túnel.
+      const x = ( current.x + d.x + width ) % width;
+      const y = current.y + d.y;
+      const key = y * width + x;
+      if ( visited.has( key ) ) continue;
+      visited.add( key );
+      queue.push( { x, y, parent: current } );
+    }
+  }
+  return []; // No existe conexión con el destino.
+}
+
 function moveGhost( game, g ) {
   if ( !g.released && game.dotsEaten >= EXIT_DOTS[ g.kind ] ) {
     g.released = true;
@@ -287,3 +323,4 @@ function update( game, deltaMs = 0 ) {
 window.createGame = createGame;
 window.update = update;
 window.DIRS = DIRS;
+window.findGhostPath = findGhostPath;
