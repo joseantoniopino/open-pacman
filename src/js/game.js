@@ -124,28 +124,59 @@ function decideGhost( game, g ) {
   // Sin salida (callejon): permitir el giro de 180.
   const choices = options.length ? options : [ '' + OPPOSITE[ g.dir ] ];
 
-  if ( g.kind === 'hunter' ) {
-    const px = Math.round( p.x );
-    const py = Math.round( p.y );
-    let best = choices[ 0 ];
-    let bestDist = Infinity;
-    for ( const dir of choices ) {
-      const d = DIRS[ dir ];
-      const nx = g.x + d.x;
-      const ny = g.y + d.y;
-      const dist = Math.abs( nx - px ) + Math.abs( ny - py );
-      if ( dist < bestDist ) {
-        bestDist = dist;
-        best = dir;
-      }
+  const px = Math.round( p.x );
+  const py = Math.round( p.y );
+  let targetX = px;
+  let targetY = py;
+  let flee = false;
+
+  switch ( g.kind ) {
+    case 'hunter':
+      break; // Persecución directa de la celda de Pacman.
+    case 'ambusher': {
+      const d = DIRS[ p.dir ];
+      targetX = px + 4 * d.x;
+      targetY = py + 4 * d.y;
+      break;
     }
-    g.dir = best;
-  } else {
-    g.dir = choices[ Math.floor( Math.random() * choices.length ) ];
+    case 'flanker': {
+      const d = DIRS[ p.dir ];
+      const hunter = game.ghosts.find( ( ghost ) => ghost.kind === 'hunter' );
+      const p2x = px + 2 * d.x;
+      const p2y = py + 2 * d.y;
+      targetX = p2x + ( p2x - hunter.x );
+      targetY = p2y + ( p2y - hunter.y );
+      break;
+    }
+    case 'wanderer':
+      flee = Math.abs( g.x - px ) + Math.abs( g.y - py ) < 8;
+      break;
   }
+
+  if ( g.kind === 'ambusher' || g.kind === 'flanker' ) {
+    targetX = Math.max( 0, Math.min( grid[ 0 ].length - 1, targetX ) );
+    targetY = Math.max( 0, Math.min( grid.length - 1, targetY ) );
+  }
+
+  let best = choices[ 0 ];
+  let bestDist = flee ? -Infinity : Infinity;
+  for ( const dir of choices ) {
+    const d = DIRS[ dir ];
+    const nx = g.x + d.x;
+    const ny = g.y + d.y;
+    const dist = Math.abs( nx - targetX ) + Math.abs( ny - targetY );
+    if ( flee ? dist > bestDist : dist < bestDist ) {
+      bestDist = dist;
+      best = dir;
+    }
+  }
+  g.dir = best;
 }
 
 function moveGhost( game, g ) {
+  if ( !g.released && game.dotsEaten >= EXIT_DOTS[ g.kind ] ) {
+    g.released = true;
+  }
   if ( g.released === false ) return;
 
   const grid = game.grid;
@@ -154,7 +185,14 @@ function moveGhost( game, g ) {
   if ( aligned( g.x ) && aligned( g.y ) ) {
     g.x = Math.round( g.x );
     g.y = Math.round( g.y );
-    decideGhost( game, g );
+    // Salir de la pen por la columna 13, incluida la puerta en la fila 12.
+    if ( g.x >= 11 && g.x <= 16 && g.y >= 12 && g.y <= 15 ) {
+      if ( g.x < 13 ) g.dir = 'right';
+      else if ( g.x > 13 ) g.dir = 'left';
+      else g.dir = 'up';
+    } else {
+      decideGhost( game, g );
+    }
     if ( !canMove( grid, g.x, g.y, g.dir, 'ghost' ) ) return;
   }
 
