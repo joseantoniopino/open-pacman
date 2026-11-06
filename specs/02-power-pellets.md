@@ -63,7 +63,7 @@ La huida dirigida es una adaptación solicitada por el usuario. El original util
 - Durante la pausa no se resuelven nuevas colisiones ni se consume tiempo de miedo.
 - El render continúa mostrando la escena, incluido el fantasma recién convertido en ojos.
 - Después de la pausa, los ojos regresan por los pasillos y atraviesan la puerta hasta `(13,14)`, dentro de la jaula.
-- La velocidad de los ojos es `1/5` de celda por actualización.
+- La velocidad de los ojos es `1/10` de celda por actualización.
 - Los ojos son inofensivos y no pueden comerse otra vez.
 - La ruta debe garantizar el regreso desde cualquier celda alcanzable, incluido el túnel.
 - No se permite teletransporte, atravesar paredes ni depender de una aproximación greedy que pueda entrar en bucle.
@@ -144,7 +144,7 @@ Cada paso debe dejar el juego ejecutable y poder confirmarse por separado. Las m
 5. **Añadir la huida y las transiciones seguras.** Implementar elección de salidas, inversión pendiente y velocidad asustada con cambios en celdas alineadas. Verificación manual: los fantasmas huyen sin quedarse desalineados.
 6. **Preparar la ruta de regreso.** Incorporar una búsqueda de caminos por celdas transitables para fantasmas. Contemplar la puerta y las conexiones del túnel. Verificación manual desde consola: se obtiene una ruta válida a `(13,14)` desde ambos extremos del túnel y los distintos corredores.
 7. **Conectar capturas y pausa.** Resolver las colisiones según `mode`, sumar la cadena, convertir en ojos y congelar la simulación durante 0,5 segundos. Verificación manual: las capturas no quitan vidas y los ojos son inofensivos.
-8. **Completar el ciclo de los ojos.** Ejecutar el regreso acelerado, regenerar dentro de la jaula y salir inmediatamente como enemigo normal. Verificación manual: un regenerado vuelve a ser peligroso y otro PP puede asustarlo de nuevo.
+8. **Completar el ciclo de los ojos.** Ejecutar el regreso a `1/10` de celda por actualización, regenerar dentro de la jaula y salir inmediatamente como enemigo normal. Verificación manual: un regenerado vuelve a ser peligroso y otro PP puede asustarlo de nuevo.
 9. **Integrar pérdida de vida y reinicio.** Limpiar estados temporales y velocidades sin restaurar consumibles ni bloquear fantasmas ya liberados. Verificación manual: una nueva partida sí restaura los cuatro PP.
 
 ## Criterios de aceptación
@@ -166,6 +166,7 @@ La verificación se realiza sirviendo `src/` y utilizando el navegador y su cons
 - [ ] Cada captura congela todos los movimientos y el temporizador de miedo durante 0,5 segundos.
 - [ ] Durante la pausa se ven los ojos del fantasma recién comido y no se procesan nuevas capturas.
 - [ ] Los ojos regresan visiblemente a `(13,14)` por una ruta válida, también desde ambos lados del túnel.
+- [ ] Los ojos avanzan a `1/10` de celda por actualización tras completar el segmento de la captura.
 - [ ] Los ojos atraviesan la puerta, pero nunca las paredes.
 - [ ] Los ojos no dañan a Pacman ni conceden puntos por contactos posteriores.
 - [ ] Otro PP no convierte los ojos en un fantasma asustado ni interrumpe su regreso.
@@ -188,13 +189,20 @@ La verificación se realiza sirviendo `src/` y utilizando el navegador y su cons
 - **Sí:** 50 puntos por PP y cadena de 200/400/800/1600 por activación, siguiendo la puntuación clásica.
 - **Sí:** pausa de 0,5 segundos por captura, duración elegida por el usuario.
 - **Sí:** temporizadores en milisegundos de juego activo, para no ligar su duración al número de frames.
-- **Sí:** velocidades `1/16` para asustados y `1/5` para ojos, aplicadas en celdas alineadas.
+- **Sí:** velocidades `1/16` para asustados y `1/10` para ojos, aplicadas en celdas alineadas.
 - **Sí:** ruta garantizada para los ojos, en lugar de decisiones greedy que puedan provocar bucles.
 - **Sí:** estado individual por fantasma, porque pueden coexistir fantasmas asustados, ojos y enemigos regenerados normales.
 - **Sí:** regeneración como enemigo normal aunque siga activo el PP anterior, siguiendo la mecánica clásica.
 - **Sí:** contar PP para los umbrales de liberación, evitando retrasarlos al sustituir cuatro dots.
 - **No:** restaurar PP al perder una vida, porque el progreso del laberinto se conserva.
 - **No:** modificar las personalidades normales, la geometría o el sistema global de scripts.
+
+## Cambio de última hora — Regreso más lento de los ojos
+
+- **Fecha:** 2026-11-06.
+- **Motivo:** durante la revisión, el usuario observó que el regreso a `1/5` regeneraba a los fantasmas demasiado rápido y reducía la ventaja de capturarlos.
+- **Cambio acordado:** reducir la velocidad de los ojos a `1/10` de celda por actualización, la mitad de la velocidad inicialmente prevista. Para la misma ruta, el regreso tarda aproximadamente el doble.
+- Se conserva el cambio de velocidad solo en celdas alineadas, la ruta garantizada y la regeneración inmediata como enemigo normal al llegar a `(13,14)`. No se añade una espera en la jaula.
 
 ## Riesgos identificados
 
