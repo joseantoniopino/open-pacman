@@ -45,6 +45,8 @@ function createGame() {
       speed: GHOST_SPEED,
       kind: g.kind,
       released: EXIT_DOTS[ g.kind ] === 0,
+      mode: 'normal', // 'normal' | 'frightened' | 'eyes'
+      reversePending: false,
     } ) ),
   };
 }
