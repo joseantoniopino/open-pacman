@@ -15,6 +15,7 @@ const GHOST_SPEED = 0.1;    // 1/10 celda/frame
 const FRIGHTENED_SPEED = 1 / 16;
 const EXIT_DOTS = { hunter: 0, ambusher: 30, flanker: 60, wanderer: 90 };
 const FRIGHTENED_DURATION_MS = 6000;
+const EAT_PAUSE_DURATION_MS = 500;
 
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots y power pellets sin destruir el original, y reiniciar.
@@ -300,13 +301,30 @@ function collides( a, b ) {
 
 // deltaMs mide tiempo de juego; el movimiento sigue siendo por actualización.
 function update( game, deltaMs = 0 ) {
+  if ( game.eatPauseRemainingMs > 0 ) {
+    const pausedMs = Math.min( deltaMs, game.eatPauseRemainingMs );
+    game.eatPauseRemainingMs -= pausedMs;
+    deltaMs -= pausedMs;
+    // La parte pausada no mueve actores, procesa contactos ni consume miedo.
+    if ( game.eatPauseRemainingMs > 0 || deltaMs <= 0 ) return;
+  }
   // Descontar antes del consumo permite que cada PP renueve los 6 segundos completos.
   updateFrightened( game, deltaMs );
   movePacman( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
   for ( const g of game.ghosts ) {
+    if ( g.mode === 'eyes' ) continue;
     if ( collides( game.pacman, g ) ) {
+      if ( g.mode === 'frightened' ) {
+        game.score += 200 * ( 2 ** Math.min( game.ghostsEatenChain, 3 ) );
+        game.ghostsEatenChain++;
+        g.mode = 'eyes';
+        g.reversePending = false;
+        game.eatPauseRemainingMs = EAT_PAUSE_DURATION_MS;
+        // Una sola captura por actualización; el render ya mostrará sus ojos.
+        return;
+      }
       game.lives--;
       if ( game.lives <= 0 ) {
         game.state = 'lost';
