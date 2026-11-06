@@ -12,6 +12,7 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 
 const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
+const FRIGHTENED_SPEED = 1 / 16;
 const EXIT_DOTS = { hunter: 0, ambusher: 30, flanker: 60, wanderer: 90 };
 const FRIGHTENED_DURATION_MS = 6000;
 
@@ -88,11 +89,18 @@ function wrapTunnel( a, width ) {
   }
 }
 
+// Incluye el segmento entre la puerta y la salida en la fila 11.
+function isInPenPassage( g ) {
+  return g.x >= 11 && g.x <= 16 && g.y > 11 && g.y <= 15;
+}
+
 function activateFrightened( game ) {
   game.frightenedRemainingMs = FRIGHTENED_DURATION_MS;
   game.ghostsEatenChain = 0;
   for ( const g of game.ghosts ) {
-    if ( g.mode !== 'eyes' ) g.mode = 'frightened';
+    if ( g.mode === 'eyes' ) continue;
+    g.mode = 'frightened';
+    g.reversePending = g.released && !isInPenPassage( g );
   }
 }
 
@@ -156,7 +164,10 @@ function decideGhost( game, g ) {
   let targetY = py;
   let flee = false;
 
-  switch ( g.kind ) {
+  switch ( g.mode === 'frightened' ? 'frightened' : g.kind ) {
+    case 'frightened':
+      flee = true; // Todos huyen de Pacman, sin cambiar su personalidad normal.
+      break;
     case 'hunter':
       break; // Persecución directa de la celda de Pacman.
     case 'ambusher': {
@@ -179,7 +190,7 @@ function decideGhost( game, g ) {
       break;
   }
 
-  if ( g.kind === 'ambusher' || g.kind === 'flanker' ) {
+  if ( g.mode !== 'frightened' && ( g.kind === 'ambusher' || g.kind === 'flanker' ) ) {
     targetX = Math.max( 0, Math.min( grid[ 0 ].length - 1, targetX ) );
     targetY = Math.max( 0, Math.min( grid.length - 1, targetY ) );
   }
@@ -211,11 +222,17 @@ function moveGhost( game, g ) {
   if ( aligned( g.x ) && aligned( g.y ) ) {
     g.x = Math.round( g.x );
     g.y = Math.round( g.y );
+    // Mantener la velocidad del segmento hasta alcanzar una celda alineada.
+    g.speed = g.mode === 'frightened' ? FRIGHTENED_SPEED : GHOST_SPEED;
     // Salir de la pen por la columna 13, incluida la puerta en la fila 12.
-    if ( g.x >= 11 && g.x <= 16 && g.y >= 12 && g.y <= 15 ) {
+    if ( isInPenPassage( g ) ) {
+      g.reversePending = false;
       if ( g.x < 13 ) g.dir = 'right';
       else if ( g.x > 13 ) g.dir = 'left';
       else g.dir = 'up';
+    } else if ( g.reversePending ) {
+      g.reversePending = false;
+      g.dir = OPPOSITE[ g.dir ];
     } else {
       decideGhost( game, g );
     }
