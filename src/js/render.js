@@ -1,5 +1,5 @@
 // render.js
-// Dibujo arcade sobre canvas. Usa game.grid (no MAZE) para reflejar dots comidos.
+// Dibujo arcade sobre canvas. Usa game.grid (no MAZE) para reflejar consumibles comidos.
 
 const TILE = 20;
 const WALL_COLOR = '#2121ff';
@@ -66,14 +66,17 @@ function drawDoor( ctx, grid ) {
   ctx.stroke();
 }
 
-function drawDots( ctx, grid ) {
+function drawDots( ctx, grid, frame ) {
   ctx.fillStyle = DOT_COLOR;
   for ( let y = 0; y < grid.length; y++ ) {
     for ( let x = 0; x < grid[ 0 ].length; x++ ) {
-      if ( grid[ y ][ x ] !== 2 ) continue;
+      const tile = grid[ y ][ x ];
+      if ( tile !== 2 && tile !== 4 ) continue;
+      // Los power pellets parpadean; los dots normales permanecen visibles.
+      if ( tile === 4 && Math.floor( frame / 15 ) % 2 !== 0 ) continue;
       const { cx, cy } = cellCenter( x, y );
       ctx.beginPath();
-      ctx.arc( cx, cy, 2.5, 0, Math.PI * 2 );
+      ctx.arc( cx, cy, tile === 4 ? 7 : 2.5, 0, Math.PI * 2 );
       ctx.fill();
     }
   }
@@ -156,7 +159,7 @@ function draw( ctx, game, frame ) {
 
   drawWalls( ctx, grid );
   drawDoor( ctx, grid );
-  drawDots( ctx, grid );
+  drawDots( ctx, grid, frame );
   drawPacman( ctx, game.pacman, frame );
   game.ghosts.forEach( ( g ) => drawGhost( ctx, g, GHOST_COLORS[ g.kind ] ) );
   drawHUD( ctx, game, W );

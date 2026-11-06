@@ -15,14 +15,14 @@ const GHOST_SPEED = 0.1;    // 1/10 celda/frame
 const EXIT_DOTS = { hunter: 0, ambusher: 30, flanker: 60, wanderer: 90 };
 
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
-// dots sin destruir el original, y reiniciar.
+// dots y power pellets sin destruir el original, y reiniciar.
 function createGame() {
   const grid = MAZE.map( ( row ) => row.slice() );
   // La celda de inicio de Pacman arranca sin dot.
   grid[ PACMAN_START.y ][ PACMAN_START.x ] = 0;
 
   let dots = 0;
-  for ( const row of grid ) for ( const v of row ) if ( v === 2 ) dots++;
+  for ( const row of grid ) for ( const v of row ) if ( v === 2 || v === 4 ) dots++;
 
   return {
     state: 'start',
@@ -61,8 +61,7 @@ function isWall( grid, x, y, actor ) {
   if ( x < 0 || x >= grid[ 0 ].length ) return true;
   const v = grid[ y ][ x ];
   if ( v === 1 ) return true;
-  if ( v === 3 && actor === 'pacman' ) return true;
-  return false;
+  return v === 3 && actor === 'pacman';
 }
 
 // Puede el actor avanzar desde (x,y) en la direccion dir?
@@ -97,10 +96,11 @@ function movePacman( game ) {
       p.dir = p.nextDir;
       p.nextDir = null;
     }
-    // Comer dot.
-    if ( grid[ p.y ][ p.x ] === 2 ) {
+    // Comer dot o power pellet, contando ambos para victoria y liberación.
+    const tile = grid[ p.y ][ p.x ];
+    if ( tile === 2 || tile === 4 ) {
       grid[ p.y ][ p.x ] = 0;
-      game.score += 10;
+      game.score += tile === 4 ? 50 : 10;
       game.dotsRemaining--;
       game.dotsEaten++;
     }
